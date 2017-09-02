@@ -3,6 +3,9 @@
 # checks multiple spool files for errors and reports them to nagios in order of severity
 
 use strict;
+use Getopt::Long qw (:config auto_version);
+
+our $VERSION='1.04';
 
 my $DEBUG = 2;
 my $CFG_FILE = '/etc/nagios/local-multi.conf';
@@ -14,6 +17,37 @@ $CFG_FILE='./local-multi.conf';	# FIXME DELME
 my @err_files = ();
 my %R_OK = ();
 my %R_CRITICAL = ();
+
+
+# parse command line options
+my $opt_help = 0;
+
+my $result = GetOptions ( "help|h" => \$opt_help,
+                          "file|f=s"   => \$CFG_FILE,
+                          "debug=i"  => \$DEBUG,
+                          );
+
+if ($opt_help) {
+    print <<EOF;
+local-multi v$VERSION
+
+This nagios check is intended to be run via NRPE on client computer
+
+It will check /var/spool/nagios-local-multi/ for any visible non-zero-length files
+containing any output not starting with "OK:", and report them as errors to nagios.
+
+Options:
+\t-h, --help
+\t\tPrint this help screen
+\t-f, --file
+\t\tread config from file instead of $CFG_FILE
+\t--debug
+\t\tset debug level
+
+EOF
+    exit 3;
+}
+
 
 # sets up defaults for all error files in spool dir
 sub enumerate_errfiles()
@@ -64,6 +98,25 @@ my @exit_perf = ();
 
 my @NAGIOS_EXIT=('OK', 'WARNING', 'CRITICAL', 'UNKNOWN');
 
+# check if we have new maximum value
+# note that it is more complicated than simple integer check, as UNKNOWN state is not worst!
+#
+# rating is (from better to worse): (0=OK, 3=UNKNOWN, 1=WARNING, 2=CRITICAL)
+#
+sub is_new_max
+{
+    my ($cur, $old) = @_;
+
+    $DEBUG > 2 && print "check $old (old) <=> $cur (new)\n";
+    die "invalid return value $old => $cur" if ($old > 3) or ($old < 0) or ($cur > 3) or ($cur < 0);
+
+    if ($old == 0) { return 1 }			# if we were OK before, anything else is more important!
+    if ($old == 2) { return 0 }			# if we were CRITICAL before, nothing else could be more important
+    if ($old == 1) { return ($cur == 2) }	# if we were WARNING before, only CRITICAL is more important, others are not
+    if ($old == 3) { return ($cur != 0) }	# if we were UNKNOWN before, only OK is less important
+}
+
+
 # reads all lines from error file, and returns the worst one!
 sub handle_one_file($)
 {
@@ -82,7 +135,7 @@ sub handle_one_file($)
                 last;				# it never can be worse than CRITICAL, so shortcut
         }
         if ($worst_level == 1) { next }		# we already have matched first WARNING, not interested in another one (only in possible CRITICAL)
-        
+
         if ($line !~ /$R_OK{$file}/) {		# it is not OK (and it is not CRITICAL) - so it must be WARNING
                 $worst_line = $line;
                 $worst_level = 1;
@@ -90,7 +143,7 @@ sub handle_one_file($)
                 next;
         }
         if ($worst_level == 0) { next }		# we already have matched first OK, not interested in another one (only in possible WARNING or CRITICAL)
-        
+
         # so here we matched first R_OK
         $worst_line = $line;
         $worst_level = 0;
@@ -99,6 +152,10 @@ sub handle_one_file($)
     close $fh;
     $DEBUG > 0 && print "worst_line ($worst_level): $worst_line\n";
 
+    if ($worst_level == -1) {
+        $worst_level = 0;
+        $worst_line = '';
+    }
 
     $DEBUG > 2 && print "  for file=$file: \n";
     $DEBUG > 2 && print "\texit level:\t$NAGIOS_EXIT[$worst_level]\n";
@@ -123,8 +180,8 @@ enumerate_errfiles();
 read_config_file();
 
 if ($DEBUG > 2) {
-    use Data::Dumper; 
-    print Dumper(\%R_OK); 
+    use Data::Dumper;
+    print Dumper(\%R_OK);
     print Dumper(\%R_CRITICAL);
 }
 
@@ -141,109 +198,6 @@ if ($DEBUG > 0) {
   print "txt =\n" . join ("\n", @exit_txt) . "\n\n----------------------\n";
   print "perf =\n" . join ("\n", @exit_perf) . "\n\n----------------------\n";
 }
-
-
-print "OK: dummy script for now\n";
-exit 0;
-
-
-# FIXME: TODO:
-#	- /usr/lib/nagios/plugins/local-multi scripta koja prati da li ima ista non-0-sized u tom diru, i ako da, generira WARNING (ili CRITICAL ako nagdje tekst CRITICAL ili ERROR) sa tekstom iz tog filea (prva non-blank linija?).
-#	  (ili da spremi detalje negdje u log, a javi samo koji files su broken i koliko su veliki? limitiran output od nagiosa)
-#		+ kreiraj listu svih filova u /var/spool/nagios-local-multi
-#		  (sa default_OK = "/^(OK:|#|\s*$)/", default_CRITICAL="/critical|error|fatal/i", default_WARNING=".*")
-#		+ procitaj conf, i ako nadjes override izmijeni gore defaulte za taj file
-#		- kreni citati file po file, liniju po liniju, sa startning statusom "WARNING", pamteci prvu liniju sa najvecom greskom za svaki file, i generiraj final output i error level (vidi nagios-smart-multi, nagios-check-many ?)
-#	- barem jedan of fileove mora biti noviji od 48h!
-
-__DATA__
-
-
-check-many
-#!/usr/bin/perl -w
-# GPLv3+ Matija Nalis <mnalis-perl@axe.tomsoft.hr> started 2016-10-28 call multiple nagios plugins and check status
-
-# FIXME use -T, see TODO.txt
-
-our $VERSION='1.05';
-
-use strict;
-use Getopt::Long qw (:config auto_version);
-
-
-
-# parse command line options 
-my $opt_help = 0;
-my $cmdfile = '';
-
-my $opt_shell = undef;
-my $opt_delimiter = undef;
-my $opt_process = undef;
-my $opt_output = undef;
-
-my $result = GetOptions ( "help|h" => \$opt_help,
-                          "file|f=s"   => \$cmdfile,
-                          "shell|s=s"  => \$opt_shell,
-                          "delimiter|d=s"  => \$opt_delimiter,
-                          "process|P=s"  => \$opt_process,
-                          "output=s"  => \$opt_output,
-                          "debug=i"  => \$DEBUG,
-                          );
-                                                         
-if ($opt_shell or $opt_delimiter or $opt_process or $opt_output) {
-    print "This option is not yet implemented.\n";
-    exit 99;
-}                                                              
-
-if ($opt_help) {
-    print <<EOF;
-check-many v$VERSION
-
-This plugin aggregates results of multiple other nagios
-plugin checks, returning most critical status of them all 
-and joining all performance data returned.
-
-Options:
-\t-h, --help
-\t\tPrint this help screen
-\t-f, --file
-\t\tread commands from file instead of STDIN
-\t--debug
-\t\tset debug level
-
-Unsupported yet:
-\t-s, --shell=<always|never|auto>
-\t-d, --delimiter=CHARACTER
-\t-P, --process=<all|first-fail|first-ok>
-\t--output=<normal|oneline|status>
-
-
-EOF
-    exit 3;
-}
-
-
-
-# check if we have new maximum value 
-# note that it is more complicated than simple integer check, as UNKNOWN state is not worst!
-#
-# rating is (from better to worse): (0=OK, 3=UNKNOWN, 1=WARNING, 2=CRITICAL)
-# 
-sub is_new_max
-{
-    my ($cur, $old) = @_;
-    
-    $DEBUG > 2 && print "check $old (old) <=> $cur (new)\n";
-    die "invalid return value $old => $cur" if ($old > 3) or ($old < 0) or ($cur > 3) or ($cur < 0);
-    
-    if ($old == 0) { return 1 }			# if we were OK before, anything else is more important!
-    if ($old == 2) { return 0 }			# if we were CRITICAL before, nothing else could be more important
-    if ($old == 1) { return ($cur == 2) }	# if we were WARNING before, only CRITICAL is more important, others are not
-    if ($old == 3) { return ($cur != 0) }	# if we were UNKNOWN before, only OK is less important
-}
-
-### MAIN ###
-
 
 
 my $max_exit_level = 0;
@@ -279,4 +233,16 @@ if ($max_exit_level) { $last_err = "err(s). $err_count non-OK msgs, " . $last_er
 $DEBUG > 0 && print "\n---- FINAL RESULT ----\n";
 print "$output_code $last_err|$err_count/$x total checks failed\n$output_data|$perf_data\n";
 exit $max_exit_level;
+
+
+# FIXME: TODO:
+#	- /usr/lib/nagios/plugins/local-multi scripta koja prati da li ima ista non-0-sized u tom diru, i ako da, generira WARNING (ili CRITICAL ako nagdje tekst CRITICAL ili ERROR) sa tekstom iz tog filea (prva non-blank linija?).
+#	  (ili da spremi detalje negdje u log, a javi samo koji files su broken i koliko su veliki? limitiran output od nagiosa)
+#		+ kreiraj listu svih filova u /var/spool/nagios-local-multi
+#		  (sa default_OK = "/^(OK:|#|\s*$)/", default_CRITICAL="/critical|error|fatal/i", default_WARNING=".*")
+#		+ procitaj conf, i ako nadjes override izmijeni gore defaulte za taj file
+#		+ kreni citati file po file, liniju po liniju, sa startning statusom "WARNING", pamteci prvu liniju sa najvecom greskom za svaki file, i generiraj final output i error level (vidi nagios-smart-multi, nagios-check-many ?)
+#	- barem jedan of fileove mora biti noviji od 48h!
+
+
 
