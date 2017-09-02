@@ -21,21 +21,11 @@ root@polespear:/usr/lib/nagios/plugins# apt-get --dry-run dist-upgrade | tail -n
 root@polespear:/usr/lib/nagios/plugins# apt-get --dry-run dist-upgrade | tail -n 1 | grep -o '[1-9]*' | wc -l
 1
 
+-------------------------------------------------------------------------------------------------------------------------------------------	
 i paziti da li je nedavno izvrsen apt-get update (/var/lib/apt/periodic/update-success-stamp ?)
 -------------------------------------------------------------------------------------------------------------------------------------------	
-i za apt
-
-pakete koji bi se trebali upgradeati ali ne
-
-npr polespear: uu
-Calculating upgrade... Done
-The following packages have been kept back:
-libpam-ssh-agent-auth nagios-nrpe-server tomsoft-default tomsoft-virt-common
-0 upgraded, 0 newly installed, 0 to remove and 4 not upgraded.
-
-a nekad cak niti to?
-
 i da ima /etc/multi_local_ignore.conf gdje se moze ignore to sve
+(oblika "filename:regexp_to_ignore")
 -------------------------------------------------------------------------------------------------------------------------------------------	
 i staleness check
 
@@ -49,19 +39,10 @@ da kreira 1777 /var/spool/nagios-local-check dir i /etc/nagios/nrpe.d/nagios-loc
 
 i da tomsoft-nadzor dependa na njega...
 
+-------------------------------------------------------------------------------------------------------------------------------------------	
 pa u /etc/cron.* staviti scripte koje samo pisu tamo nesto, npr.:
 - sources.list da se zali ako nije unificiran (razliciti names mirrora, ili ima bpo bez posebnog komentara zasto i kada itd)
 - cron jobs output?
-- apt-get da li ne zeli nesto skunuti a ne zali se APT check onda (pa imamo stariju verziju tomsoft-default npr). npr. kontos:
-kontos% sudo apt-get dist-upgrade
-Reading package lists... Done
-Building dependency tree
-Reading state information... Done
-Calculating upgrade... Done
-The following packages have been kept back:
-tomsoft-default
-0 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.
-
 - tomsoft-ganeti-node da doda "gnt-cluster verify | egrep -v ..." i "gnt-cluster verify-disks isto" u cron.daily
 - eventualni output od tomsoft-mysql-backup i dr.
 -------------------------------------------------------------------------------------------------------------------------------------------	
