@@ -1,0 +1,30 @@
+# use "equivs-build nagios-local-multi.control" to build package, then "reprepro includedeb wheezy nagios-local-multi_1.xx_all.deb" to install it in repository
+
+### Commented entries have reasonable defaults.
+### Uncomment to edit them.
+Section: admin
+Priority: required
+# Homepage: <enter URL here; no default>
+Standards-Version: 3.6.2
+
+Package: nagios-local-multi
+Version: 1.00
+Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
+# Pre-Depends: <comma-separated list of packages>
+# Depends: 
+# Conflicts: 
+# Recommends: 
+# Suggests: 
+# Postinst: postinst.sh
+# Provides: <comma-separated list of packages>
+# Replaces: <comma-separated list of packages>
+# Architecture: all
+# Copyright: <copyright file; defaults to GPL2>
+# Changelog: <changelog file; defaults to a generic changelog>
+# Readme: <README.Debian file; defaults to a generic one>
+# Extra-Files: <comma-separated list of additional files for the doc directory>
+# Files: 
+Description: checks its spool dir for non-empty files containing errors
+ This nagios check is to be run via NRPE
+ .
+ It will check 
