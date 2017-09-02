@@ -8,7 +8,7 @@ Priority: required
 Standards-Version: 3.6.2
 
 Package: nagios-local-multi
-Version: 1.02
+Version: 1.03
 Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
 # Pre-Depends: <comma-separated list of packages>
 # Depends: 

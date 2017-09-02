@@ -2,5 +2,7 @@
 
 use strict;
 
-echo "OK: dummy script for now"
-exit 0
+print "OK: dummy script for now\n";
+
+exit 0;
+
