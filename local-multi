@@ -56,6 +56,14 @@ sub read_config_file()
 }
 
 
+my @exit_cmd = ();
+my @exit_value = ();
+my @exit_code = ();
+my @exit_txt = ();
+my @exit_perf = ();
+
+my @NAGIOS_EXIT=('OK', 'WARNING', 'CRITICAL', 'UNKNOWN');
+
 # reads all lines from error file, and returns the worst one!
 sub handle_one_file($)
 {
@@ -89,8 +97,22 @@ sub handle_one_file($)
         $DEBUG > 1 && print "\tmatched (0): $line\n";
     }
     close $fh;
-    $DEBUG && print "worst_line ($worst_level): $worst_line\n";
-    return $worst_line;
+    $DEBUG > 0 && print "worst_line ($worst_level): $worst_line\n";
+
+
+    $DEBUG > 2 && print "  for file=$file: \n";
+    $DEBUG > 2 && print "\texit level:\t$NAGIOS_EXIT[$worst_level]\n";
+#    print "\tfull=$worst_line, code=$?\n";
+    my $_code = $NAGIOS_EXIT[$worst_level];
+    my $_msg = "${_code}: $worst_line";
+    my $_perf = '';
+    $DEBUG > 2 && print "\tupdate msg:\t$_msg\n";
+
+    push @exit_cmd, $file;
+    push @exit_value, $worst_level;
+    push @exit_code, $_code;
+    push @exit_txt, $_msg;
+    push @exit_perf, $_perf;
 }
 
 ##############
@@ -100,10 +122,24 @@ sub handle_one_file($)
 enumerate_errfiles();
 read_config_file();
 
-use Data::Dumper; print Dumper(\%R_OK); print Dumper(\%R_CRITICAL);
+if ($DEBUG > 2) {
+    use Data::Dumper; 
+    print Dumper(\%R_OK); 
+    print Dumper(\%R_CRITICAL);
+}
+
 
 foreach my $err_file (@err_files) {
     handle_one_file ($err_file);
+}
+
+if ($DEBUG > 0) {
+  print "\n\n\n";
+  print "commands =\n" . join ("\n", @exit_cmd) . "\n\n----------------------\n";
+  print "values =\n" . join ("\n", @exit_value) . "\n\n----------------------\n";
+  print "code =\n" . join ("\n", @exit_code) . "\n\n----------------------\n";
+  print "txt =\n" . join ("\n", @exit_txt) . "\n\n----------------------\n";
+  print "perf =\n" . join ("\n", @exit_perf) . "\n\n----------------------\n";
 }
 
 
@@ -134,16 +170,6 @@ our $VERSION='1.05';
 use strict;
 use Getopt::Long qw (:config auto_version);
 
-my @paths = qw(/usr/local/lib/nagios/plugins /usr/lib/nagios/plugins /usr/local/bin /usr/local/sbin /usr/bin /usr/sbin /bin /sbin);
-
-
-my @exit_cmd = ();
-my @exit_value = ();
-my @exit_code = ();
-my @exit_txt = ();
-my @exit_perf = ();
-
-my @NAGIOS_EXIT=('OK', 'WARNING', 'CRITICAL', 'UNKNOWN');
 
 
 # parse command line options 
@@ -198,74 +224,6 @@ EOF
 
 
 
-# execute command if present
-sub exec_cmd
-{
-    my $cmd = shift;
-
-    foreach my $p (@paths) {	# find full path
-      if (-e "$p/$cmd") { $cmd = "$p/$cmd"; last; }
-    }
-    
-    $DEBUG > 1 && print "using full path for $cmd\n";
-    
-    my $args = join (' ', @_);
-    return `$cmd $args`;
-}
-
-# executes command and handle output
-sub handle_cmd
-{
-    my $cmd = $_[0];
-    
-    my $output = exec_cmd (@_);
-    my $exit_sig = $? & 127;
-    my $exit_code = $? >> 8;
-    
-    if ($exit_sig) {
-       $exit_code = 3; $output = "UNKNOWN: kill_signal=$exit_sig; " . $output;
-    }
-    if ($exit_code > 3) {
-       $exit_code = 3; $output = "UNKNOWN: exit_code=$exit_code; " . $output;
-    }
-    
-    
-    my $_code = undef;
-    my $_msg = undef;
-    my $_perf = undef;
-    
-    $DEBUG > 2 && print "  for cmd=" . join(' ', @_) . ": \n";
-    $DEBUG > 2 && print "\texit level:\t$NAGIOS_EXIT[$exit_code]\n";
-#    print "\tfull=$output, code=$?\n";
-    if ($output =~ /^(\S+\s+)?(OK|CRITICAL|WARNING|UNKNOWN)\s*[-:]?\s+(.*?)(\|(.*))?$/) {
-         my $_prefix = $1 || '';
-         $_code = $2;
-         $_msg = $3;
-         $_perf = defined($5) ? $5 : '';
-
-         $_msg = "${_prefix}${_code}: $_msg";
-         $_prefix =~ s{\s*$}{};
-         # if $_msg ne 'OK' # include WARNING/ERROR string only if not-OK
-         ;
-         
-         $DEBUG > 2 && print "\tfound pre:\tprefix=$_prefix, code=$_code\n";
-         $DEBUG > 2 && print "\tfound msg:\t$_msg\n";
-         $DEBUG > 2 && print "\tfound perf:\t$_perf\n" if $_perf;
-    } else {
-         $_code = $NAGIOS_EXIT[$exit_code];
-         $_msg = "${_code} (?): $output"; chomp($_msg);
-         $_perf = '';
-         $DEBUG > 2 && print "\tupdate msg:\t$_msg\n";
-         #if ($exit_code == 0) { $exit_code = 3; $_code = 'UNKNOWN'; } # if error level indicated OK, but output is unparsable, set it to UNKNOWN -- DISABLED: should always use return code (https://nagios-plugins.org/doc/guidelines.html#AEN33)
-    }
-
-    push @exit_cmd, join (' ', @_);
-    push @exit_value, $exit_code;
-    push @exit_code, $_code;
-    push @exit_txt, $_msg;
-    push @exit_perf, $_perf;
-}
-
 # check if we have new maximum value 
 # note that it is more complicated than simple integer check, as UNKNOWN state is not worst!
 #
@@ -286,39 +244,6 @@ sub is_new_max
 
 ### MAIN ###
 
-# read commands from STDIN - FIXME see other options from https://nagios-plugins.org/doc/check-many.html
-my @commands=();
-my $CMD_FD;
-if ($cmdfile) {
-  open $CMD_FD, '<', $cmdfile or die "can't open $cmdfile: $!";
-} else {
-  $CMD_FD = *STDIN;
-}
-
-while (<$CMD_FD>) {
-  chomp;
-  next if /^\s*$/;
-  next if /^\s*#/;
-  push @commands, $_;
-}
-close $CMD_FD;
-
-# execute all commands in order
-{
-  foreach my $full (@commands) {
-    my ($cmd, @args) = split ' ', $full;
-    handle_cmd ($cmd, @args);
-  }
-}
-
-if ($DEBUG > 0) {
-  print "\n\n\n";
-  print "commands =\n" . join ("\n", @exit_cmd) . "\n\n----------------------\n";
-  print "values =\n" . join ("\n", @exit_value) . "\n\n----------------------\n";
-  print "code =\n" . join ("\n", @exit_code) . "\n\n----------------------\n";
-  print "txt =\n" . join ("\n", @exit_txt) . "\n\n----------------------\n";
-  print "perf =\n" . join ("\n", @exit_perf) . "\n\n----------------------\n";
-}
 
 
 my $max_exit_level = 0;
