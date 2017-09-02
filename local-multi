@@ -1,7 +1,312 @@
 #!/usr/bin/perl -wT
+# GPLv3+ Matija Nalis <mnalis-perl@axe.tomsoft.hr> started 2017-09-02
+# checks multiple spool files for errors and reports them to nagios in order of severity
 
 use strict;
 
+my $CFG_FILE = '/etc/nagios/local-multi.conf';
+my $SPOOL_DIR = '/var/spool/nagios-local-multi';
+
+$SPOOL_DIR='.';	# FIXME DELME
+$CFG_FILE='./local-multi.conf';	# FIXME DELME
+
+my @err_files = ();
+my %R_OK = ();
+my %R_CRITICAL = ();
+
+# sets up defaults for all error files in spool dir
+sub enumerate_errfiles()
+{
+    opendir(my $dh, $SPOOL_DIR) or die "can't opendir $SPOOL_DIR: $!";
+    @err_files = grep { /^[^.]/ && -f "$SPOOL_DIR/$_" } readdir($dh);
+    closedir $dh;
+
+    my $default_OK = '^(OK:|\s*#|\s*$)';
+    my $default_CRITICAL = '(?i)critical|error|fatal';
+
+    foreach my $err_file (@err_files) {		# setup default regexps
+        $R_OK{$err_file} = $default_OK;
+        $R_CRITICAL{$err_file} = $default_CRITICAL;
+    }
+}
+
+# reads config file and changes defaults for found error files
+# lines are like:
+#	OK:apt:^(OK:|#|\s*$)
+#	CRITICAL:apt:critical|error|fatal
+
+sub read_config_file()
+{
+    return unless -e $cfgfile;      # it's OK if config file is missing, assume default checks in that case
+    open my $cfgfile, '<', $CFG_FILE or die "can't read $CFG_FILE: $!";
+    while (<$cfgfile>) {
+        chomp;
+        next if /^\s*(#.*)?$/;	# skip over comments and empty lines
+        my ($status, $file, $regex) = split (/:/, $_, 3);
+        if ($status eq 'OK') {
+            $R_OK{$file} = $regex if defined $R_OK{$file};
+        } elsif ($status eq 'CRITICAL') {
+            $R_CRITICAL{$file} = $regex if defined $R_CRITICAL{$file};
+        } else {
+            die "cannot parse $CFG_FILE line $.: $_";
+        }
+    }
+    close $cfgfile;
+}
+
+enumerate_errfiles();
+read_config_file();
+
+use Data::Dumper;
+print Dumper(\%R_OK);
+print Dumper(\%R_CRITICAL);
+
 print "OK: dummy script for now\n";
 exit 0;
+
+
+# FIXME: TODO:
+#	- /usr/lib/nagios/plugins/local-multi scripta koja prati da li ima ista non-0-sized u tom diru, i ako da, generira WARNING (ili CRITICAL ako nagdje tekst CRITICAL ili ERROR) sa tekstom iz tog filea (prva non-blank linija?).
+#	  (ili da spremi detalje negdje u log, a javi samo koji files su broken i koliko su veliki? limitiran output od nagiosa)
+#		- kreiraj listu svih filova u /var/spool/nagios-local-multi
+#		  (sa default_OK = "/^(OK:|#|\s*$)/", default_CRITICAL="/critical|error|fatal/i", default_WARNING=".*")
+#		- procitaj conf, i ako nadjes override izmijeni gore defaulte za taj file
+#		- kreni citati file po file, liniju po liniju, sa startning statusom "WARNING", pamteci prvu liniju sa najvecom greskom za svaki file, i generiraj final output i error level (vidi nagios-smart-multi, nagios-check-many ?)
+#	- barem jedan of fileove mora biti noviji od 48h!
+
+__DATA__
+
+
+check-many
+#!/usr/bin/perl -w
+# GPLv3+ Matija Nalis <mnalis-perl@axe.tomsoft.hr> started 2016-10-28 call multiple nagios plugins and check status
+
+# FIXME use -T, see TODO.txt
+
+our $VERSION='1.05';
+
+use strict;
+use Getopt::Long qw (:config auto_version);
+
+my @paths = qw(/usr/local/lib/nagios/plugins /usr/lib/nagios/plugins /usr/local/bin /usr/local/sbin /usr/bin /usr/sbin /bin /sbin);
+
+
+my @exit_cmd = ();
+my @exit_value = ();
+my @exit_code = ();
+my @exit_txt = ();
+my @exit_perf = ();
+
+my @NAGIOS_EXIT=('OK', 'WARNING', 'CRITICAL', 'UNKNOWN');
+
+
+# parse command line options 
+my $DEBUG = 0;
+my $opt_help = 0;
+my $cmdfile = '';
+
+my $opt_shell = undef;
+my $opt_delimiter = undef;
+my $opt_process = undef;
+my $opt_output = undef;
+
+my $result = GetOptions ( "help|h" => \$opt_help,
+                          "file|f=s"   => \$cmdfile,
+                          "shell|s=s"  => \$opt_shell,
+                          "delimiter|d=s"  => \$opt_delimiter,
+                          "process|P=s"  => \$opt_process,
+                          "output=s"  => \$opt_output,
+                          "debug=i"  => \$DEBUG,
+                          );
+                                                         
+if ($opt_shell or $opt_delimiter or $opt_process or $opt_output) {
+    print "This option is not yet implemented.\n";
+    exit 99;
+}                                                              
+
+if ($opt_help) {
+    print <<EOF;
+check-many v$VERSION
+
+This plugin aggregates results of multiple other nagios
+plugin checks, returning most critical status of them all 
+and joining all performance data returned.
+
+Options:
+\t-h, --help
+\t\tPrint this help screen
+\t-f, --file
+\t\tread commands from file instead of STDIN
+\t--debug
+\t\tset debug level
+
+Unsupported yet:
+\t-s, --shell=<always|never|auto>
+\t-d, --delimiter=CHARACTER
+\t-P, --process=<all|first-fail|first-ok>
+\t--output=<normal|oneline|status>
+
+
+EOF
+    exit 3;
+}
+
+
+
+# execute command if present
+sub exec_cmd
+{
+    my $cmd = shift;
+
+    foreach my $p (@paths) {	# find full path
+      if (-e "$p/$cmd") { $cmd = "$p/$cmd"; last; }
+    }
+    
+    $DEBUG > 1 && print "using full path for $cmd\n";
+    
+    my $args = join (' ', @_);
+    return `$cmd $args`;
+}
+
+# executes command and handle output
+sub handle_cmd
+{
+    my $cmd = $_[0];
+    
+    my $output = exec_cmd (@_);
+    my $exit_sig = $? & 127;
+    my $exit_code = $? >> 8;
+    
+    if ($exit_sig) {
+       $exit_code = 3; $output = "UNKNOWN: kill_signal=$exit_sig; " . $output;
+    }
+    if ($exit_code > 3) {
+       $exit_code = 3; $output = "UNKNOWN: exit_code=$exit_code; " . $output;
+    }
+    
+    
+    my $_code = undef;
+    my $_msg = undef;
+    my $_perf = undef;
+    
+    $DEBUG > 2 && print "  for cmd=" . join(' ', @_) . ": \n";
+    $DEBUG > 2 && print "\texit level:\t$NAGIOS_EXIT[$exit_code]\n";
+#    print "\tfull=$output, code=$?\n";
+    if ($output =~ /^(\S+\s+)?(OK|CRITICAL|WARNING|UNKNOWN)\s*[-:]?\s+(.*?)(\|(.*))?$/) {
+         my $_prefix = $1 || '';
+         $_code = $2;
+         $_msg = $3;
+         $_perf = defined($5) ? $5 : '';
+
+         $_msg = "${_prefix}${_code}: $_msg";
+         $_prefix =~ s{\s*$}{};
+         # if $_msg ne 'OK' # include WARNING/ERROR string only if not-OK
+         ;
+         
+         $DEBUG > 2 && print "\tfound pre:\tprefix=$_prefix, code=$_code\n";
+         $DEBUG > 2 && print "\tfound msg:\t$_msg\n";
+         $DEBUG > 2 && print "\tfound perf:\t$_perf\n" if $_perf;
+    } else {
+         $_code = $NAGIOS_EXIT[$exit_code];
+         $_msg = "${_code} (?): $output"; chomp($_msg);
+         $_perf = '';
+         $DEBUG > 2 && print "\tupdate msg:\t$_msg\n";
+         #if ($exit_code == 0) { $exit_code = 3; $_code = 'UNKNOWN'; } # if error level indicated OK, but output is unparsable, set it to UNKNOWN -- DISABLED: should always use return code (https://nagios-plugins.org/doc/guidelines.html#AEN33)
+    }
+
+    push @exit_cmd, join (' ', @_);
+    push @exit_value, $exit_code;
+    push @exit_code, $_code;
+    push @exit_txt, $_msg;
+    push @exit_perf, $_perf;
+}
+
+# check if we have new maximum value 
+# note that it is more complicated than simple integer check, as UNKNOWN state is not worst!
+#
+# rating is (from better to worse): (0=OK, 3=UNKNOWN, 1=WARNING, 2=CRITICAL)
+# 
+sub is_new_max
+{
+    my ($cur, $old) = @_;
+    
+    $DEBUG > 2 && print "check $old (old) <=> $cur (new)\n";
+    die "invalid return value $old => $cur" if ($old > 3) or ($old < 0) or ($cur > 3) or ($cur < 0);
+    
+    if ($old == 0) { return 1 }			# if we were OK before, anything else is more important!
+    if ($old == 2) { return 0 }			# if we were CRITICAL before, nothing else could be more important
+    if ($old == 1) { return ($cur == 2) }	# if we were WARNING before, only CRITICAL is more important, others are not
+    if ($old == 3) { return ($cur != 0) }	# if we were UNKNOWN before, only OK is less important
+}
+
+### MAIN ###
+
+# read commands from STDIN - FIXME see other options from https://nagios-plugins.org/doc/check-many.html
+my @commands=();
+my $CMD_FD;
+if ($cmdfile) {
+  open $CMD_FD, '<', $cmdfile or die "can't open $cmdfile: $!";
+} else {
+  $CMD_FD = *STDIN;
+}
+
+while (<$CMD_FD>) {
+  chomp;
+  next if /^\s*$/;
+  next if /^\s*#/;
+  push @commands, $_;
+}
+close $CMD_FD;
+
+# execute all commands in order
+{
+  foreach my $full (@commands) {
+    my ($cmd, @args) = split ' ', $full;
+    handle_cmd ($cmd, @args);
+  }
+}
+
+if ($DEBUG > 0) {
+  print "\n\n\n";
+  print "commands =\n" . join ("\n", @exit_cmd) . "\n\n----------------------\n";
+  print "values =\n" . join ("\n", @exit_value) . "\n\n----------------------\n";
+  print "code =\n" . join ("\n", @exit_code) . "\n\n----------------------\n";
+  print "txt =\n" . join ("\n", @exit_txt) . "\n\n----------------------\n";
+  print "perf =\n" . join ("\n", @exit_perf) . "\n\n----------------------\n";
+}
+
+
+my $max_exit_level = 0;
+my $output_code = '';
+my $last_err = 'All checks OK.';
+my $err_count = 0;
+my $perf_data = '';
+my $output_data = '';
+my $x = 0;
+
+# consolidate all checks (group by same cmd)
+for $x (0 .. $#exit_cmd) {
+    if ($exit_value[$x] > 0) { $err_count++; }
+    if (is_new_max($exit_value[$x], $max_exit_level)) {	# final result is worst result we've had (0=OK, 3=UNKNOWN, 1=WARNING, 2=CRITICAL);
+        $max_exit_level = $exit_value[$x];
+        $output_code = $exit_code[$x];
+        if ($exit_value[$x]) {	# in non-OK status (needed because is_new_max(0,0) will return TRUE)
+            $last_err = "last ($x) is " . $exit_txt[$x];
+            $last_err =~ s/\n/; /g;
+            $DEBUG > 1 && print "\t$err_count error msgs, cur= " . $exit_txt[$x] . "\n";
+        }
+    }
+    $DEBUG > 1 && print "x=$x, " . $exit_cmd[$x] . " = $exit_txt[$x] --- $exit_perf[$x]\n";
+    $output_data .= "$exit_txt[$x]\n";	# always keep output msgs and perfdata in same order
+    if ($exit_perf[$x]) {
+      $perf_data .= "$exit_perf[$x]\n";
+    } else {
+      $perf_data .= "-\n";
+    }
+}
+if ($max_exit_level) { $last_err = "err(s). $err_count non-OK msgs, " . $last_err; }
+
+$DEBUG > 0 && print "\n---- FINAL RESULT ----\n";
+print "$output_code $last_err|$err_count/$x total checks failed\n$output_data|$perf_data\n";
+exit $max_exit_level;
 
