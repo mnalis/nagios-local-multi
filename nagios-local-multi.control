@@ -22,10 +22,11 @@ Postinst: postinst.sh
 # Copyright: <copyright file; defaults to GPL2>
 # Changelog: <changelog file; defaults to a generic changelog>
 Readme: README.md
-# Extra-Files: <comma-separated list of additional files for the doc directory>
-Files: .placeholder /var/spool/nagios-local-check/
+Extra-Files: TODO.txt
+Files: .placeholder /var/spool/nagios-local-multi/
  nagios-local-multi.cfg /etc/nagios/nrpe.d/
  nagios-local-multi /usr/lib/nagios/plugins/
+ local-multi.conf /etc/nagios/
 Description: checks its spool dir for non-empty files containing errors
  This nagios check is to be run via NRPE
  .

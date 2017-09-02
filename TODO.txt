@@ -1,17 +1,17 @@
 - paket za multiple lokalne checkove
-	- da kreira 1777 /var/spool/nagios-local-multi dir 
+	+ da kreira 1777 /var/spool/nagios-local-multi dir 
 	+ da kreira /etc/nagios/nrpe.d/nagios-local-multi.cfg sa /usr/lib/nagios/plugins/nagios-local-multi scriptom 
-	- allow $ARGV[0] as alternate directory ?
+	-? allow $ARGV[0] as alternate directory ?
 
 	- /usr/lib/nagios/plugins/nagios-local-multi scripta koja prati da li ima ista non-0-sized u tom diru, i ako da, generira WARNING (ili CRITICAL ako nagdje tekst CRITICAL ili ERROR) sa tekstom iz tog filea (prva non-blank linija?).
 	  (ili da spremi detalje negdje u log, a javi samo koji files su broken i koliko su veliki? limitiran output od nagiosa)
 		- kreiraj listu svih filova u /var/spool/nagios-local-multi
-		  (sa default_OK = "/^(OK:|#|\s*$)/", default_CRITICAL="/critical|error|fatal/i"
+		  (sa default_OK = "/^(OK:|#|\s*$)/", default_CRITICAL="/critical|error|fatal/i", default_WARNING=".*")
 		- procitaj conf, i ako nadjes override izmijeni gore defaulte za taj file
 		- kreni citati file po file, liniju po liniju, sa startning statusom "WARNING", pamteci prvu liniju sa najvecom greskom za svaki file, i generiraj final output i error level (vidi nagios-smart-multi, nagios-check-many ?)
-	- i da tomsoft-nadzor dependa na njega...
-	- i da ima /etc/nagios/local-multi.conf gdje se moze ignore to sve
-	  (oblika "OK:<filename>:<regexp_to_ignore>" - default je '^OK:'
+	+ i da tomsoft-nadzor dependa na njega...
+	+? i da ima /etc/nagios/local-multi.conf gdje se moze ignore to sve
+	  (oblika "OK:<filename>:<regexp_to_ignore>"  ili "CRITICAL:<filename>:<regexp_for_critical>" ili "WARNING:<filename>:<regexp_for_warning>"
 	  posudi kod iz nagios-smart-multi
 
 -------------------------------------------------------------------------------------------------------------------------------------------	
@@ -19,7 +19,7 @@ u /etc/cron.* staviti scripte koje samo pisu tamo nesto, npr.:
 -------------------------------------------------------------------------------------------------------------------------------------------	
 - i staleness check koji gleda modified time od dira i dize alert ako se nije updateao duze od par sati 
   (dummy check koji samo radi rm pa echo "OK: `date`" u neki filea unutra)... ako umre cron ili je disk full da znamo
-- tomsoft-ganeti-node da doda "gnt-cluster verify | egrep -v ..." i "gnt-cluster verify-disks isto" u cron.daily
++ tomsoft-ganeti-node da doda "gnt-cluster verify | egrep -v ..." i "gnt-cluster verify-disks isto" u cron.daily
 - paziti da li je nedavno izvrsen apt-get update (/var/lib/apt/periodic/update-success-stamp ?)
   (error ako je stariji od 48h recimo)
 - apt check
