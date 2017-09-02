@@ -22,6 +22,9 @@ Examples for use:
 - example /etc/cron.hourly/ganeti_sanity
   gnt-cluster verify | egrep 'ERROR|WARNING|NOTICE' > /var/spool/nagios-local-multi/ganeti_sanity
 
+(Note: All files must be readable by user which nagios/NRPE runs as, so do an 
+umask 000 first in your scripts)
+
 Best feature: you only add the check via NRPE once to your nagios server, and all other scripts are only 
 quickly created on client and automatically report to nagios.
 

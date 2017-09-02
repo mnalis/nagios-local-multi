@@ -15,7 +15,7 @@ Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
 # Conflicts: 
 # Recommends: 
 # Suggests: 
-# Postinst: postinst.sh
+Postinst: postinst.sh
 # Provides: <comma-separated list of packages>
 # Replaces: <comma-separated list of packages>
 # Architecture: all
@@ -23,7 +23,9 @@ Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
 # Changelog: <changelog file; defaults to a generic changelog>
 Readme: README.md
 # Extra-Files: <comma-separated list of additional files for the doc directory>
-# Files: 
+Files: .placeholder /var/spool/nagios-local-check/
+ nagios-local-multi.cfg /etc/nagios/nrpe.d/
+ nagios-local-multi /usr/lib/nagios/plugins/
 Description: checks its spool dir for non-empty files containing errors
  This nagios check is to be run via NRPE
  .
