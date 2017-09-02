@@ -21,11 +21,11 @@ Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
 # Architecture: all
 # Copyright: <copyright file; defaults to GPL2>
 # Changelog: <changelog file; defaults to a generic changelog>
-# Readme: <README.Debian file; defaults to a generic one>
+Readme: README.md
 # Extra-Files: <comma-separated list of additional files for the doc directory>
 # Files: 
 Description: checks its spool dir for non-empty files containing errors
  This nagios check is to be run via NRPE
  .
  It will check /var/spool/nagios-local-multi/ for any visible non-zero-length files
- cointaing any output not starting with "OK:", and report them as errors to nagios.
+ containing any output not starting with "OK:", and report them as errors to nagios.
