@@ -1,9 +1,9 @@
 - paket za multiple lokalne checkove
 	+ da kreira 1777 /var/spool/nagios-local-multi dir 
-	+ da kreira /etc/nagios/nrpe.d/nagios-local-multi.cfg sa /usr/lib/nagios/plugins/nagios-local-multi scriptom 
+	+ da kreira /etc/nagios/nrpe.d/nagios-local-multi.cfg sa /usr/lib/nagios/plugins/local-multi scriptom 
 	-? allow $ARGV[0] as alternate directory ?
 
-	- /usr/lib/nagios/plugins/nagios-local-multi scripta koja prati da li ima ista non-0-sized u tom diru, i ako da, generira WARNING (ili CRITICAL ako nagdje tekst CRITICAL ili ERROR) sa tekstom iz tog filea (prva non-blank linija?).
+	- /usr/lib/nagios/plugins/local-multi scripta koja prati da li ima ista non-0-sized u tom diru, i ako da, generira WARNING (ili CRITICAL ako nagdje tekst CRITICAL ili ERROR) sa tekstom iz tog filea (prva non-blank linija?).
 	  (ili da spremi detalje negdje u log, a javi samo koji files su broken i koliko su veliki? limitiran output od nagiosa)
 		- kreiraj listu svih filova u /var/spool/nagios-local-multi
 		  (sa default_OK = "/^(OK:|#|\s*$)/", default_CRITICAL="/critical|error|fatal/i", default_WARNING=".*")

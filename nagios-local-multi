@@ -1,6 +1,1 @@
-#!/usr/bin/perl -wT
-
-use strict;
-
-echo "OK: dummy script for now"
-exit 0
+nagios-local-multi: file-in-unusual-dir var/spool/nagios-local-multi/.placeholder
