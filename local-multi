@@ -3,6 +3,5 @@
 use strict;
 
 print "OK: dummy script for now\n";
-
 exit 0;
 
