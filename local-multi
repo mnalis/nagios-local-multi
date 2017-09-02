@@ -4,6 +4,7 @@
 
 use strict;
 
+my $DEBUG = 2;
 my $CFG_FILE = '/etc/nagios/local-multi.conf';
 my $SPOOL_DIR = '/var/spool/nagios-local-multi';
 
@@ -25,28 +26,28 @@ sub enumerate_errfiles()
     my $default_CRITICAL = '(?i)critical|error|fatal';
 
     foreach my $err_file (@err_files) {		# setup default regexps
-        $R_OK{$err_file} = $default_OK;
-        $R_CRITICAL{$err_file} = $default_CRITICAL;
+        $R_OK{$err_file} = qr/$default_OK/;
+        $R_CRITICAL{$err_file} = qr/$default_CRITICAL/;
     }
 }
 
 # reads config file and changes defaults for found error files
 # lines are like:
 #	OK:apt:^(OK:|#|\s*$)
-#	CRITICAL:apt:critical|error|fatal
+#	CRITICAL:apt:(?i)critical|error|fatal
 
 sub read_config_file()
 {
-    return unless -e $cfgfile;      # it's OK if config file is missing, assume default checks in that case
-    open my $cfgfile, '<', $CFG_FILE or die "can't read $CFG_FILE: $!";
+    return unless -e $CFG_FILE;      # it's OK if config file is missing, assume default checks in that case
+    open my $cfgfile, '<', $CFG_FILE  or die "can't read $CFG_FILE: $!";
     while (<$cfgfile>) {
         chomp;
         next if /^\s*(#.*)?$/;	# skip over comments and empty lines
         my ($status, $file, $regex) = split (/:/, $_, 3);
         if ($status eq 'OK') {
-            $R_OK{$file} = $regex if defined $R_OK{$file};
+            $R_OK{$file} = qr/$regex/ if defined $R_OK{$file};
         } elsif ($status eq 'CRITICAL') {
-            $R_CRITICAL{$file} = $regex if defined $R_CRITICAL{$file};
+            $R_CRITICAL{$file} = qr/$regex/ if defined $R_CRITICAL{$file};
         } else {
             die "cannot parse $CFG_FILE line $.: $_";
         }
@@ -54,12 +55,57 @@ sub read_config_file()
     close $cfgfile;
 }
 
+
+# reads all lines from error file, and returns the worst one!
+sub handle_one_file($)
+{
+    my ($file) = @_;
+    open my $fh, '<', $file or return "CRITICAL: can't open $file: $!";
+    $DEBUG && print "--- opened $file\n";
+    my $worst_line = undef;
+    my $worst_level = -1;
+    while (my $line = <$fh>) {
+        chomp $line;
+        $DEBUG > 2 && print "\tchecking $line\n";
+        if ($line =~ /$R_CRITICAL{$file}/) {
+                $worst_line = $line;
+                $worst_level = 2;
+                $DEBUG > 1 && print "\tmatched (2): $line\n";
+                last;				# it never can be worse than CRITICAL, so shortcut
+        }
+        if ($worst_level == 1) { next }		# we already have matched first WARNING, not interested in another one (only in possible CRITICAL)
+        
+        if ($line !~ /$R_OK{$file}/) {		# it is not OK (and it is not CRITICAL) - so it must be WARNING
+                $worst_line = $line;
+                $worst_level = 1;
+                $DEBUG > 1 && print "\tmatched (1): $line\n";
+                next;
+        }
+        if ($worst_level == 0) { next }		# we already have matched first OK, not interested in another one (only in possible WARNING or CRITICAL)
+        
+        # so here we matched first R_OK
+        $worst_line = $line;
+        $worst_level = 0;
+        $DEBUG > 1 && print "\tmatched (0): $line\n";
+    }
+    close $fh;
+    $DEBUG && print "worst_line ($worst_level): $worst_line\n";
+    return $worst_line;
+}
+
+##############
+#### MAIN ####
+##############
+
 enumerate_errfiles();
 read_config_file();
 
-use Data::Dumper;
-print Dumper(\%R_OK);
-print Dumper(\%R_CRITICAL);
+use Data::Dumper; print Dumper(\%R_OK); print Dumper(\%R_CRITICAL);
+
+foreach my $err_file (@err_files) {
+    handle_one_file ($err_file);
+}
+
 
 print "OK: dummy script for now\n";
 exit 0;
@@ -68,9 +114,9 @@ exit 0;
 # FIXME: TODO:
 #	- /usr/lib/nagios/plugins/local-multi scripta koja prati da li ima ista non-0-sized u tom diru, i ako da, generira WARNING (ili CRITICAL ako nagdje tekst CRITICAL ili ERROR) sa tekstom iz tog filea (prva non-blank linija?).
 #	  (ili da spremi detalje negdje u log, a javi samo koji files su broken i koliko su veliki? limitiran output od nagiosa)
-#		- kreiraj listu svih filova u /var/spool/nagios-local-multi
+#		+ kreiraj listu svih filova u /var/spool/nagios-local-multi
 #		  (sa default_OK = "/^(OK:|#|\s*$)/", default_CRITICAL="/critical|error|fatal/i", default_WARNING=".*")
-#		- procitaj conf, i ako nadjes override izmijeni gore defaulte za taj file
+#		+ procitaj conf, i ako nadjes override izmijeni gore defaulte za taj file
 #		- kreni citati file po file, liniju po liniju, sa startning statusom "WARNING", pamteci prvu liniju sa najvecom greskom za svaki file, i generiraj final output i error level (vidi nagios-smart-multi, nagios-check-many ?)
 #	- barem jedan of fileove mora biti noviji od 48h!
 
@@ -101,7 +147,6 @@ my @NAGIOS_EXIT=('OK', 'WARNING', 'CRITICAL', 'UNKNOWN');
 
 
 # parse command line options 
-my $DEBUG = 0;
 my $opt_help = 0;
 my $cmdfile = '';
 
