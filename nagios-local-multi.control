@@ -27,4 +27,5 @@ Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
 Description: checks its spool dir for non-empty files containing errors
  This nagios check is to be run via NRPE
  .
- It will check 
+ It will check /var/spool/nagios-local-multi/ for any visible non-zero-length files
+ cointaing any output not starting with "OK:", and report them as errors to nagios.
