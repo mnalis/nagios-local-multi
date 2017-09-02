@@ -23,6 +23,10 @@ Examples for use:
   gnt-cluster verify | egrep 'ERROR|WARNING|NOTICE' > /var/spool/nagios-local-multi/ganeti_sanity
 
 Best feature: you only add the check via NRPE once to your nagios server, and all other scripts are only 
-quickly created on client.
+quickly created on client and automatically report to nagios.
+
+This is best used a safety net for scripts which "should never fail" -- if your script expect to raise 
+nagios alerts fairly often, it is probably better to dedicate separate nagios check for them, as 
+nagios output is limited, and nagios-local-multi will combine all error output together to send to NRPE.
 
 License: GPLv3 or higher, Matija Nalis <mnalis-debian@axe.tomsoft.hr>, started 2017-09-02
