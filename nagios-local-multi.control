@@ -8,7 +8,7 @@ Priority: required
 Standards-Version: 3.6.2
 
 Package: nagios-local-multi
-Version: 1.00
+Version: 1.01
 Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
 # Pre-Depends: <comma-separated list of packages>
 # Depends: 
@@ -28,6 +28,7 @@ Files: .placeholder /var/spool/nagios-local-multi/
  local-multi /usr/lib/nagios/plugins/
  local-multi.conf /etc/nagios/
  nagios-local-multi /usr/share/lintian/overrides/
+ local-multi-cron /etc/cron.daily/
 Description: checks its spool dir for non-empty files containing errors
  This nagios check is to be run via NRPE
  .
