@@ -24,3 +24,5 @@ Examples for use:
 
 Best feature: you only add the check via NRPE once to your nagios server, and all other scripts are only 
 quickly created on client.
+
+License: GPLv3 or higher, Matija Nalis <mnalis-debian@axe.tomsoft.hr>, started 2017-09-02
