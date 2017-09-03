@@ -5,7 +5,7 @@
 use strict;
 use Getopt::Long qw (:config auto_version);
 
-our $VERSION='1.06';	# FIXME: keep in sync with debian package version
+our $VERSION='1.07';	# FIXME: keep in sync with debian package version
 
 my $DEBUG = 0;
 my $CFG_FILE = '/etc/nagios/local-multi.conf';
@@ -256,7 +256,7 @@ for $x (0 .. $#exit_cmd) {
 if ($max_exit_level) { $last_err = "err(s). $err_count non-OK msgs, " . $last_err; }
 
 $DEBUG > 0 && print "\n---- FINAL RESULT ----\n";
-$x = scalar @exit_cmd;	# NB perl annoyance: "for $x" is actually ALWATS "for my $x"
+$x = scalar @exit_cmd;	# NB perl annoyance: "for $x" is actually ALWAYS "for my $x"
 print "$output_code $last_err|$err_count/$x total checks failed\n$output_data|$perf_data\n";
 exit $max_exit_level;
 
