@@ -5,14 +5,14 @@
 use strict;
 use Getopt::Long qw (:config auto_version);
 
-our $VERSION='1.04';
+our $VERSION='1.05';
 
 my $DEBUG = 0;
 my $CFG_FILE = '/etc/nagios/local-multi.conf';
 my $SPOOL_DIR = '/var/spool/nagios-local-multi';
 
-$SPOOL_DIR='./testdata';	# FIXME DELME
-$CFG_FILE='./local-multi.conf';	# FIXME DELME
+#$SPOOL_DIR='./testdata';	# FIXME DELME
+#$CFG_FILE='./local-multi.conf';	# FIXME DELME
 
 my @err_files = ();
 my %R_OK = ();
