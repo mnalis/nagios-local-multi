@@ -3,3 +3,5 @@
 # are there any conflicted/nonupgraded packages? (print last line only if it contains non-zero number)
 apt-get --dry-run dist-upgrade | sed -ne '$s/^\(.*[1-9].*\)$/\1/p' > /var/spool/nagios-local-multi/apt
 
+# update timestamp file always
+echo "OK: `date`" > /var/spool/nagios-local-multi/timestamp

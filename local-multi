@@ -48,6 +48,7 @@ EOF
     exit 3;
 }
 
+my $newest_timestamp = 0;
 
 # sets up defaults for all error files in spool dir
 sub enumerate_errfiles()
@@ -62,6 +63,10 @@ sub enumerate_errfiles()
     foreach my $err_file (@err_files) {		# setup default regexps
         $R_OK{$err_file} = qr/$default_OK/;
         $R_CRITICAL{$err_file} = qr/$default_CRITICAL/;
+        my $mtime = (stat($SPOOL_DIR . '/' . $err_file))[9];	# find newest file timestamp 
+        if ($mtime > $newest_timestamp) {
+            $newest_timestamp = $mtime;
+        }
     }
 }
 
@@ -200,6 +205,16 @@ foreach my $err_file (@err_files) {
     handle_one_file ($err_file);
 }
 
+my $time_diff = time - $newest_timestamp;
+if ($time_diff > 2*24*60*60) {	# if newest file is older than 2 days, then it is stale!
+    push @exit_cmd, '*STALE*';
+    push @exit_value, 1;
+    push @exit_code, 'WARNING';
+    push @exit_txt, "WARNING: all files older that $time_diff seconds";
+    push @exit_perf, '';
+}
+
+
 if ($DEBUG > 0) {
   print "\n\n\n";
   print "commands =\n" . join ("\n", @exit_cmd) . "\n\n----------------------\n";
@@ -244,10 +259,5 @@ $DEBUG > 0 && print "\n---- FINAL RESULT ----\n";
 $x = scalar @exit_cmd;	# NB perl annoyance: "for $x" is actually ALWATS "for my $x"
 print "$output_code $last_err|$err_count/$x total checks failed\n$output_data|$perf_data\n";
 exit $max_exit_level;
-
-
-# FIXME: TODO:
-#	- barem jedan of fileove mora biti noviji od 48h!
-
 
 
