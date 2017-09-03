@@ -1,4 +1,4 @@
-- paket za multiple lokalne checkove
++ paket za multiple lokalne checkove
 	+ da kreira 1777 /var/spool/nagios-local-multi dir 
 	+ da kreira /etc/nagios/nrpe.d/nagios-local-multi.cfg sa /usr/lib/nagios/plugins/local-multi scriptom 
 
@@ -12,7 +12,7 @@
 	+ i da ima /etc/nagios/local-multi.conf gdje se moze ignore to sve
 	  (oblika "OK:<filename>:<regexp_to_ignore>"  ili "CRITICAL:<filename>:<regexp_for_critical>" ili "WARNING:<filename>:<regexp_for_warning>"
 	  posudi kod iz nagios-smart-multi
-	-? allow $ARGV[0] as alternate directory ?
+	+ allow $ARGV[0] as alternate directory ?
 
 -------------------------------------------------------------------------------------------------------------------------------------------	
 u /etc/cron.* staviti scripte koje samo pisu tamo nesto, npr.:
