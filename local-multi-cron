@@ -4,4 +4,7 @@
 apt-get --dry-run dist-upgrade | sed -ne '$s/^\(.*[1-9].*\)$/\1/p' > /var/spool/nagios-local-multi/apt
 
 # update timestamp file always
-echo "OK: `date`" > /var/spool/nagios-local-multi/timestamp
+echo "OK: `date`" > /var/spool/nagios-local-multi/timestamp.tmp && mv -f /var/spool/nagios-local-multi/timestamp.tmp /var/spool/nagios-local-multi/timestamp
+
+# last apt update timestamp
+cp -p /var/lib/apt/periodic/update-success-stamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp

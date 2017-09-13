@@ -5,6 +5,9 @@ containing any output not starting with "OK:", and report them as errors to nagi
 
 Regexp for OK/CRITICAL can be defined per-file basis in /etc/nagios/local-multi.conf
 
+If file has "timestamp" in the name, it will also be checked that it was updated in last 48 hours.
+Files ending in ".tmp" or starting with "." are ignored.
+
 Examples for use:
 
 - simply redirect your cron output to file /var/spool/nagios-local-multi/cron

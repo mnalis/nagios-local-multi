@@ -5,11 +5,12 @@
 use strict;
 use Getopt::Long qw (:config auto_version);
 
-our $VERSION='1.07';	# FIXME: keep in sync with debian package version
+our $VERSION='1.09';	# FIXME: keep in sync with debian package version
 
 my $DEBUG = 0;
 my $CFG_FILE = '/etc/nagios/local-multi.conf';
 my $SPOOL_DIR = '/var/spool/nagios-local-multi';
+my $STALE_SECONDS = 48 * 3600;	# files with "timestamp" in name are checked for staleness
 
 #$SPOOL_DIR='./testdata';		# FIXME DELME DEBUGONLY
 #$CFG_FILE='./local-multi.conf';	# FIXME DELME DEBUGONLY
@@ -54,7 +55,7 @@ my $newest_timestamp = 0;
 sub enumerate_errfiles()
 {
     opendir(my $dh, $SPOOL_DIR) or die "can't opendir $SPOOL_DIR: $!";
-    @err_files = grep { /^[^.]/ && -f "$SPOOL_DIR/$_" } readdir($dh);
+    @err_files = grep { /^[^.]/ && ! /\.tmp$/ && -f "$SPOOL_DIR/$_" } readdir($dh);
     closedir $dh;
 
     my $default_OK = '^(OK:|\s*#|\s*$)';
@@ -169,6 +170,16 @@ sub handle_one_file($)
     if ($worst_level == -1) {
         $worst_level = 0;
         $worst_line = '';
+    }
+
+    if ($worst_level == 0 and $file =~ /timestamp/i) {			# if it is still OK and has "timestamp" in name, check for staleness
+        my $mtime = (stat($SPOOL_DIR . '/' . $file))[9];
+        my $diff = time - $mtime;
+        if ($diff > $STALE_SECONDS) {
+                my $stale_hours = int($diff / 3600);
+                $worst_line = "was not updated for more than ${stale_hours}h";
+                $worst_level = 1;
+        }
     }
     $DEBUG > 0 && print "worst_line ($worst_level): $worst_line\n";
 
