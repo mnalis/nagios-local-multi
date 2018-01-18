@@ -9,3 +9,5 @@ echo "OK: `date`" > /var/spool/nagios-local-multi/timestamp.tmp && mv -f /var/sp
 # last apt update timestamp
 test -f /var/lib/apt/periodic/update-stamp && cp -pf /var/lib/apt/periodic/update-stamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp
 test -f /var/lib/apt/periodic/update-success-stamp && cp -pf /var/lib/apt/periodic/update-success-stamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp
+
+exit 0

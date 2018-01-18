@@ -8,7 +8,7 @@ Priority: required
 Standards-Version: 3.6.2
 
 Package: nagios-local-multi
-Version: 1.09f
+Version: 1.09g
 Maintainer: Matija Nalis <mnalis-debian@axe.tomsoft.hr>
 # Pre-Depends: <comma-separated list of packages>
 # /mn/ depends on xz-utils or check_running_kernel fails, see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=780098
