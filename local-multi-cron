@@ -13,4 +13,7 @@ test -f /var/lib/apt/periodic/update-success-stamp && cp -pf /var/lib/apt/period
 # check for finished no-systemd instalation
 dpkg -l tomsoft-sysv  | grep -q '^ii' && dpkg -l systemd systemd-sysv dbus | awk '/^i./ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_systemd_timestamp
 
+# console setting unwanted for servers
+dpkg -l console-setup console-setup-linux kbd | awk '/^i./ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_kbd
+
 exit 0
