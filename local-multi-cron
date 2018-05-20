@@ -10,4 +10,7 @@ echo "OK: `date`" > /var/spool/nagios-local-multi/timestamp.tmp && mv -f /var/sp
 test -f /var/lib/apt/periodic/update-stamp && cp -pf /var/lib/apt/periodic/update-stamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp
 test -f /var/lib/apt/periodic/update-success-stamp && cp -pf /var/lib/apt/periodic/update-success-stamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp
 
+# check for finished no-systemd instalation
+dpkg -l tomsoft-sysv  | grep -q '^ii' && dpkg -l systemd systemd-sysv dbus | awk '/^i./ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_systemd_timestamp
+
 exit 0
