@@ -16,6 +16,11 @@ test -f /var/lib/apt/periodic/update-success-stamp && cp -pf /var/lib/apt/period
 dpkg -l tomsoft-sysv 2>/dev/null | grep -q '^ii' && dpkg -l systemd systemd-sysv dbus 2>/dev/null | awk '/^i./ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_systemd_timestamp
 
 # console setting unwanted for servers
-dpkg -l console-setup console-setup-linux kbd keyboard-configuration xkb-data 2>/dev/null | awk '/^i./ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_kbd
+dpkg -l console-setup console-setup-linux kbd keyboard-configuration 2>/dev/null | awk '/^i./ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_kbd
+
+# more console settings (but asterisk requires this one)
+dpkg -l asterisk-modules 2>/dev/null | awk '/^i./ { exit 1 } ' && \
+	dpkg -l xkb-data 2>/dev/null | awk '/^i./ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_kbd2
+
 
 exit 0
