@@ -9,17 +9,21 @@ apt-get --dry-run dist-upgrade | sed -ne '$s/^\(.*[1-9].*\)$/\1/p' > /var/spool/
 echo "OK: `date`" > /var/spool/nagios-local-multi/timestamp.tmp && mv -f /var/spool/nagios-local-multi/timestamp.tmp /var/spool/nagios-local-multi/timestamp
 
 # last apt update timestamp
+rm -f /var/spool/nagios-local-multi/apt_update_sucess_timestamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp
 test -f /var/lib/apt/periodic/update-stamp && cp -pf /var/lib/apt/periodic/update-stamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp
 test -f /var/lib/apt/periodic/update-success-stamp && cp -pf /var/lib/apt/periodic/update-success-stamp /var/spool/nagios-local-multi/apt_update_sucess_timestamp
 
 # check for finished no-systemd instalation
+rm -f /var/spool/nagios-local-multi/no_systemd_timestamp
 dpkg -l tomsoft-sysv 2>/dev/null | grep -q '^ii' && dpkg -l systemd systemd-sysv dbus 2>/dev/null | awk '/^(i.|.i)/ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_systemd_timestamp
 
 # console setting unwanted for servers
+rm -f /var/spool/nagios-local-multi/no_kbd
 dpkg -l console-setup console-setup-linux kbd keyboard-configuration 2>/dev/null | awk '/^(i.|.i)/ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_kbd
 
 # more console settings (but asterisk requires this one)
-dpkg -l asterisk-modules virtualbox-qt 2>/dev/null | awk '/^(i.|.i)/ { exit 1 } ' && \
+rm -f /var/spool/nagios-local-multi/no_kbd2
+dpkg -l asterisk-modules virtualbox-qt ffmpeg 2>/dev/null | awk '/^(i.|.i)/ { exit 1 } ' && \
 	dpkg -l xkb-data 2>/dev/null | awk '/^(i.|.i)/ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_kbd2
 
 
