@@ -26,5 +26,8 @@ rm -f /var/spool/nagios-local-multi/no_kbd2
 dpkg -l asterisk-modules virtualbox-qt ffmpeg 2>/dev/null | awk '/^(i.|.i)/ { exit 1 } ' && \
 	dpkg -l xkb-data 2>/dev/null | awk '/^(i.|.i)/ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > /var/spool/nagios-local-multi/no_kbd2
 
+# acmetool check if certificates are broken
+rm -f /var/spool/nagios-local-multi/acmetool
+test -x /usr/bin/acmetool && sudo -u acme acmetool status | grep needs-renewing > /var/spool/nagios-local-multi/acmetool
 
 exit 0
