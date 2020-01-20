@@ -29,5 +29,6 @@ dpkg -l asterisk-modules virtualbox-qt ffmpeg 2>/dev/null | awk '/^(i.|.i)/ { ex
 # acmetool check if certificates are broken
 rm -f /var/spool/nagios-local-multi/acmetool
 test -x /usr/bin/acmetool && sudo -u acme acmetool status | grep needs-renewing > /var/spool/nagios-local-multi/acmetool
+test -x /usr/bin/acmetool && grep acme-v01 /var/lib/acme/conf/* >> /var/spool/nagios-local-multi/acmetool
 
 exit 0
