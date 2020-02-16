@@ -9,6 +9,9 @@ apt-get --dry-run dist-upgrade | sed -ne '$s/^\(.*[1-9].*\)$/\1/p' > $SPOOLDIR/a
 # update timestamp file always
 echo "OK: `date`" > $SPOOLDIR/timestamp.tmp && mv -f $SPOOLDIR/timestamp.tmp $SPOOLDIR/timestamp
 
+# Debian Security Team support status
+check-support-status | grep '^\*' > $SPOOLDIR/support_status
+
 # last apt update timestamp
 rm -f $SPOOLDIR/apt_update_sucess_timestamp $SPOOLDIR/apt_update_sucess_timestamp
 test -f /var/lib/apt/periodic/update-stamp && cp -pf /var/lib/apt/periodic/update-stamp $SPOOLDIR/apt_update_sucess_timestamp
