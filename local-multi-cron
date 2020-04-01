@@ -30,6 +30,10 @@ rm -f $SPOOLDIR/no_kbd2
 dpkg -l asterisk-modules virtualbox-qt ffmpeg 2>/dev/null | awk '/^(i.|.i)/ { exit 1 } ' && \
 	dpkg -l xkb-data 2>/dev/null | awk '/^(i.|.i)/ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > $SPOOLDIR/no_kbd2
 
+# misc junk
+rm -f $SPOOLDIR/no_junk
+dpkg -l consolekit os-prober qstat task-english tasksel tasksel-data 2>/dev/null | awk '/^(i.|.i)/ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > $SPOOLDIR/no_junk
+
 # acmetool check if certificates are broken
 rm -f $SPOOLDIR/acmetool
 test -x /usr/bin/acmetool && sudo -u acme acmetool status | egrep "needs-renewing|acme-v01" > $SPOOLDIR/acmetool
