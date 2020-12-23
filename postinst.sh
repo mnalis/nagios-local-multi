@@ -12,6 +12,7 @@ fi
 
 
 chmod 1777 /var/spool/nagios-local-multi
+chmod go-w /var/spool/nagios-local-multi/* || true
 invoke-rc.d nagios-nrpe-server restart || exit $?
 
 exit 0

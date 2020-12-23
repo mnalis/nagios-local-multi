@@ -5,7 +5,7 @@
 use strict;
 use Getopt::Long qw (:config auto_version);
 
-our $VERSION='1.09';	# FIXME: keep in sync with debian package version
+our $VERSION='1.10';	# FIXME: keep in sync with debian package version
 
 my $DEBUG = 0;
 my $CFG_FILE = '/etc/nagios/local-multi.conf';
@@ -19,6 +19,7 @@ my @err_files = ();
 my %R_OK = ();
 my %R_CRITICAL = ();
 
+umask 0027;
 
 # parse command line options
 my $opt_help = 0;

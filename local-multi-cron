@@ -1,7 +1,7 @@
 #!/bin/sh
 
 SPOOLDIR=/var/spool/nagios-local-multi
-umask 000
+umask 022
 
 # are there any conflicted/nonupgraded packages? (print last line only if it contains non-zero number)
 apt-get --dry-run dist-upgrade | sed -ne '$s/^\(.*[1-9].*\)$/\1/p' > $SPOOLDIR/apt
