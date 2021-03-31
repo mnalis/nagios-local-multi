@@ -10,7 +10,7 @@ our $VERSION='1.10';	# FIXME: keep in sync with debian package version
 my $DEBUG = 0;
 my $CFG_FILE = '/etc/nagios/local-multi.conf';
 my $SPOOL_DIR = '/var/spool/nagios-local-multi';
-my $STALE_SECONDS = 48 * 3600;	# files with "timestamp" in name are checked for staleness
+my $STALE_SECONDS_DEFAULT = 48 * 3600;	# in seconds. files with "timestamp" in name are checked for staleness by default (unless overriden by format "timestamp_3600")
 
 #$SPOOL_DIR='./testdata';		# FIXME DELME DEBUGONLY
 #$CFG_FILE='./local-multi.conf';	# FIXME DELME DEBUGONLY
@@ -173,10 +173,11 @@ sub handle_one_file($)
         $worst_line = '';
     }
 
-    if ($worst_level == 0 and $file =~ /timestamp/i) {			# if it is still OK and has "timestamp" in name, check for staleness
+    if ($worst_level == 0 and $file =~ /timestamp_?(\d*)/i) {			# if it is still OK and has "timestamp" in name, check for staleness
+        my $stale_sec = $1 || $STALE_SECONDS_DEFAULT;
         my $mtime = (stat($SPOOL_DIR . '/' . $file))[9];
         my $diff = time - $mtime;
-        if ($diff > $STALE_SECONDS) {
+        if ($diff > $stale_sec) {
                 my $stale_hours = int($diff / 3600);
                 $worst_line = "was not updated for more than ${stale_hours}h";
                 $worst_level = 1;
