@@ -17,6 +17,9 @@ rm -f $SPOOLDIR/apt_update_sucess_timestamp $SPOOLDIR/apt_update_sucess_timestam
 test -f /var/lib/apt/periodic/update-stamp && cp -pf /var/lib/apt/periodic/update-stamp $SPOOLDIR/apt_update_sucess_timestamp
 test -f /var/lib/apt/periodic/update-success-stamp && cp -pf /var/lib/apt/periodic/update-success-stamp $SPOOLDIR/apt_update_sucess_timestamp
 
+# upgradeable apt packages
+command -v apt > /dev/null && apt list --upgradeable 2> /dev/null | grep -v '^Listing' > $SPOOLDIR/apt_upgradeable_timestamp
+
 # check for finished no-systemd instalation
 rm -f $SPOOLDIR/no_systemd_timestamp
 dpkg -l tomsoft-sysv 2>/dev/null | grep -q '^ii' && dpkg -l systemd systemd-sysv dbus 2>/dev/null | awk '/^(i.|.i)/ { print $2} ' | xargs -r echo "WARNING: do: apt-get remove --purge" > $SPOOLDIR/no_systemd_timestamp
